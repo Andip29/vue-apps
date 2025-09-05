@@ -1,5 +1,13 @@
 <script setup>
 import Breadcrumbs from '../components/ui/Breadcrumbs.vue'
+import { useRoute } from 'vue-router'
+const route = useRoute()
+
+// Parent "Router" dianggap aktif & terbuka kalau path sekarang diawali "/dashboard/router"
+const isRouterSectionOpen = () => route.path.startsWith('/dashboard/router')
+
+// Helper untuk item daun (leaf) per route name
+const isActiveByName = (name) => route.name === name
 </script>
 
 <template>
@@ -241,24 +249,24 @@ import Breadcrumbs from '../components/ui/Breadcrumbs.vue'
 				            <nav id="menu" class="nav-main" role="navigation">
 
 				                <ul class="nav nav-main">
-				                    <li>
+				                    <li :class="{ 'nav-active': isActiveByName('dashboard') }">
 				                        <router-link class="nav-link" to="/dashboard">
 				                            <i class="bx bx-home-alt" aria-hidden="true"></i>
 				                            <span>Dashboard</span>
                                         </router-link>                        
 				                    </li>
-				                    <li class="nav-parent">
+				                    <li class="nav-parent" :class="{ 'nav-expanded nav-active': isRouterSectionOpen() }">
 				                        <a class="nav-link" href="#">
 				                            <i class="bx bx-cart-alt" aria-hidden="true"></i>
 				                            <span>Router</span>
                                         </a>
 				                        <ul class="nav nav-children">
-				                            <li>
+				                            <li :class="{ 'nav-active': isActiveByName('router-list') }">
 				                                <router-link class="nav-link" :to="{ name: 'router-list' }">
 				                                    Router-List
                                                 </router-link >
 				                            </li>
-				                            <li>
+				                            <li :class="{ 'nav-active': isActiveByName('router-create') }">
 				                                <router-link class="nav-link" :to="{ name: 'router-create' }">
 				                                    Create Router
                                                 </router-link>

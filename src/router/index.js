@@ -4,11 +4,14 @@ import DashboardLayout from '../layouts/DashboardLayout.vue'
 
 import UserRegister from '../components/auth/UserRegister.vue'
 import UserLogin from '../components/auth/UserLogin.vue'
+import Router from '../components/routers/Router.vue'
 import RouterList from '../components/routers/RouterList.vue'
 import RouterCreate from '../components/routers/RouterCreate.vue'
 import RouterEdit from '../components/routers/RouterEdit.vue'
 import RouterDetail from '../components/routers/RouterDetail.vue'
-import Router from '../components/routers/Router.vue'
+import Odp from '../components/odps/odp.vue'
+
+
 
 const router = createRouter({
   history: createWebHistory(),
@@ -67,6 +70,22 @@ const router = createRouter({
                 ]
                 
             },
+            {
+                path: 'odp',
+                component: Odp,
+                name: 'odp',
+                meta: { title: 'ODPs', breadcrumb: 'ODP' },
+                children : [
+                    { path: 'odp', redirect: { name: 'odp-list' } },
+                    {
+                        path: 'odp',
+                        component: OdpList,
+                        name: 'odp-list',
+                        meta: { title: 'List ODP', breadcrumb: 'ODP-List' },              
+                    },
+                    
+                ]
+            }
             
         ]
     }
