@@ -5,6 +5,7 @@ const route = useRoute()
 
 // Parent "Router" dianggap aktif & terbuka kalau path sekarang diawali "/dashboard/router"
 const isRouterSectionOpen = () => route.path.startsWith('/dashboard/router')
+const isOdpSectionOpen = () => route.path.startsWith('/dashboard/odp')
 
 // Helper untuk item daun (leaf) per route name
 const isActiveByName = (name) => route.name === name
@@ -273,23 +274,16 @@ const isActiveByName = (name) => route.name === name
 				                            </li>
 				                        </ul>
 				                    </li>
-				                    <li>
-				                        <a class="nav-link" href="mailbox-folder.html">
-				                            <span class="float-end badge badge-primary">182</span>
-				                            <i class="bx bx-envelope" aria-hidden="true"></i>
-				                            <span>Mailbox</span>
-				                        </a>                        
-				                    </li>
-				                    <li class="nav-parent">
+				                    <li class="nav-parent" :class="{ 'nav-expanded nav-active': isOdpSectionOpen() }">
 				                        <a class="nav-link" href="#">
 				                            <i class="bx bx-layout" aria-hidden="true"></i>
 				                            <span>Layouts</span>
 				                        </a>
 				                        <ul class="nav nav-children">
-				                            <li>
-				                                <a class="nav-link" href="index.html">
-				                                    Landing Page
-				                                </a>
+				                            <li :class="{ 'nav-active': isActiveByName('odp-list') }">
+				                                <router-link  class="nav-link" :to="{ name: 'odp-list' }">
+				                                    ODP-list
+				                                </router-link>
 				                            </li>
 				                        </ul>
 				                    </li>

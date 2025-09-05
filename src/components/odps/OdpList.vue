@@ -71,7 +71,7 @@ onBeforeUnmount(() => {
 									<td>Internet Explorer 4.0</td>
 									<td>Win 95+</td>
 									<td>4</td>
-									<!-- <td>
+									<td>
 										<router-link :to="{ name: 'router-detail' }">
 										<button type="button" class="mb-1 mt-1 me-1 btn btn-xs btn-default border border-primary"><i class="icons icon-notebook"></i></button>
 										</router-link>
@@ -79,7 +79,7 @@ onBeforeUnmount(() => {
 										<button type="button" class="mb-1 mt-1 me-1 btn btn-xs btn-default border border-warning"><i class="icons icon-note"></i></button>
 										</router-link>
 										<button type="button" class="mb-1 mt-1 me-1 btn btn-xs btn-default border border-danger"><i class="icons icon-trash"></i></button>
-									</td> -->
+									</td>
 								</tr>
 								<tr>
 									<td>Trident</td>
@@ -91,11 +91,11 @@ onBeforeUnmount(() => {
 									<td>Internet Explorer 5.0</td>
 									<td>Win 95+</td>
 									<td>5</td>
-									<!-- <td>
+									<td>
 										<button type="button" class="mb-1 mt-1 me-1 btn btn-xs btn-default border border-primary"><i class="icons icon-notebook"></i></button>
 										<button type="button" class="mb-1 mt-1 me-1 btn btn-xs btn-default border border-warning"><i class="icons icon-note"></i></button>
 										<button type="button" class="mb-1 mt-1 me-1 btn btn-xs btn-default border border-danger"><i class="icons icon-trash"></i></button>
-									</td> -->
+									</td>
 								</tr>
                             </tbody>
                         </table>

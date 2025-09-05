@@ -4,12 +4,13 @@ import DashboardLayout from '../layouts/DashboardLayout.vue'
 
 import UserRegister from '../components/auth/UserRegister.vue'
 import UserLogin from '../components/auth/UserLogin.vue'
-import Router from '../components/routers/Router.vue'
+import Routerlayout from '../components/routers/RouterLayout.vue'
 import RouterList from '../components/routers/RouterList.vue'
 import RouterCreate from '../components/routers/RouterCreate.vue'
 import RouterEdit from '../components/routers/RouterEdit.vue'
 import RouterDetail from '../components/routers/RouterDetail.vue'
-import Odp from '../components/odps/OdpTemp.vue'
+import OdpLayout from '../components/odps/OdpLayout.vue'
+import OdpList from '../components/odps/OdpList.vue'
 
 
 
@@ -39,7 +40,7 @@ const router = createRouter({
         children: [
             {
                 path: 'router',
-                component: Router,
+                component: Routerlayout,
                 name: 'router',
                 meta: { title: 'Routers', breadcrumb: 'Router' },
                 children: [
@@ -72,7 +73,7 @@ const router = createRouter({
             },
             {
                 path: 'odp',
-                component: Odp,
+                component: OdpLayout,
                 name: 'odp',
                 meta: { title: 'ODPs', breadcrumb: 'ODP' },
                 children : [
