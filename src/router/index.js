@@ -9,7 +9,7 @@ import RouterList from '../components/routers/RouterList.vue'
 import RouterCreate from '../components/routers/RouterCreate.vue'
 import RouterEdit from '../components/routers/RouterEdit.vue'
 import RouterDetail from '../components/routers/RouterDetail.vue'
-import Odp from '../components/odps/odp.vue'
+import Odp from '../components/odps/OdpTemp.vue'
 
 
 
