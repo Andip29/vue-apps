@@ -1,12 +1,12 @@
 <script setup>
-
+import Breadcrumbs from '../components/ui/Breadcrumbs.vue'
 </script>
 
 <template>
     <section class="body">
         <header class="header">
 				<div class="logo-container">
-					<a href="../4.3.0" class="logo">
+					<a href="#" class="logo">
 						<img src="/img/logo.png" width="75" height="35" alt="Porto Admin" />
 					</a>
 
@@ -247,20 +247,20 @@
 				                            <span>Dashboard</span>
                                         </router-link>                        
 				                    </li>
-				                    <li class="nav-parent nav-expanded nav-active">
+				                    <li class="nav-parent">
 				                        <a class="nav-link" href="#">
 				                            <i class="bx bx-cart-alt" aria-hidden="true"></i>
 				                            <span>Router</span>
                                         </a>
 				                        <ul class="nav nav-children">
 				                            <li>
-				                                <router-link class="nav-link" to="/dashboard/router">
+				                                <router-link class="nav-link" :to="{ name: 'router-list' }">
 				                                    Router-List
                                                 </router-link >
 				                            </li>
 				                            <li>
-				                                <router-link class="nav-link" to="/dashboard/router/create">
-				                                    Products List
+				                                <router-link class="nav-link" :to="{ name: 'router-create' }">
+				                                    Create Router
                                                 </router-link>
 				                            </li>
 				                        </ul>
@@ -272,7 +272,7 @@
 				                            <span>Mailbox</span>
 				                        </a>                        
 				                    </li>
-				                    <li class="nav-parent nav-expanded nav-active">
+				                    <li class="nav-parent">
 				                        <a class="nav-link" href="#">
 				                            <i class="bx bx-layout" aria-hidden="true"></i>
 				                            <span>Layouts</span>
@@ -330,17 +330,6 @@
 				            </nav>
 				        </div>
 
-				        <!-- <script>
-				            // Maintain Scroll Position
-				            if (typeof localStorage !== 'undefined') {
-				                if (localStorage.getItem('sidebar-left-position') !== null) {
-				                    var initialPosition = localStorage.getItem('sidebar-left-position'),
-				                        sidebarLeft = document.querySelector('#sidebar-left .nano-content');
-
-				                    sidebarLeft.scrollTop = initialPosition;
-				                }
-				            }
-				        </script> -->
 
 				    </div>
 
@@ -348,26 +337,7 @@
 			<!-- end: sidebar -->
 
             <section role="main" class="content-body">
-					<header class="page-header">
-						<h2>Default Layout</h2>
-
-						<div class="right-wrapper text-end">
-							<ol class="breadcrumbs">
-								<li>
-									<a href="index.html">
-										<i class="bx bx-home-alt"></i>
-									</a>
-								</li>
-
-								<li><span>Layouts</span></li>
-
-								<li><span>Default</span></li>
-
-							</ol>
-
-							<a class="sidebar-right-toggle" data-open="sidebar-right"><i class="fas fa-chevron-left"></i></a>
-						</div>
-					</header>
+					<Breadcrumbs />
 
 					<!-- start: page -->
                     
