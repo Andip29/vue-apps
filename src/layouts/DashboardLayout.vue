@@ -285,6 +285,11 @@ const isActiveByName = (name) => route.name === name
 				                                    ODP-list
 				                                </router-link>
 				                            </li>
+											<li :class="{ 'nav-active': isActiveByName('odp-create') }">
+				                                <router-link class="nav-link" :to="{ name: 'odp-create' }">
+				                                    Create Router
+                                                </router-link>
+				                            </li>
 				                        </ul>
 				                    </li>
 				                    <li class="nav-parent">

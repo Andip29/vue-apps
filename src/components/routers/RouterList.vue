@@ -44,7 +44,7 @@ onBeforeUnmount(() => {
 					</div>
 					<h2 class="card-title">Basic</h2>
 				</header>
-					<div class="card-body">
+					<div class="card-body table-responsive">
 						<table class="table table-bordered table-striped mb-0" id="datatable-default">
 							<thead>
 								<tr>
