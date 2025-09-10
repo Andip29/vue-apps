@@ -107,8 +107,8 @@ onBeforeUnmount(() => {
             >
               <thead>
                 <tr>
-                  <th>ID ODP</th>
-                  <th>NAMA ODP</th>
+                  <th>ID ODC</th>
+                  <th>NAMA ODC</th>
                   <th>PORT</th>
                   <th>STOK</th>
                   <th>LATITUDE</th>
@@ -151,9 +151,9 @@ onBeforeUnmount(() => {
                 </tr>
                 <tr>
                   <td>OPT-2</td>
-                  <td>ODP-2</td>
-                  <td>16</td>
-                  <td>4</td>
+                  <td>ODC-2</td>
+                  <td>8</td>
+                  <td>2</td>
                   <td>-6.8977556</td>
                   <td>127.554633</td>
                   <td>
