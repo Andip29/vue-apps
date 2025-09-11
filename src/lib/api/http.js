@@ -4,10 +4,10 @@ import axios from "axios";
 // Ambil dari env atau fallback:
 const base = (
   import.meta.env.VITE_API_BASE_URL || "http://10.0.0.104/api/noah"
-).replace(/\/+$/, ""); 
+).replace(/\/+$/, "");
 
 const http = axios.create({
-  baseURL: base, 
+  baseURL: base,
   timeout: 15000,
   headers: { "Content-Type": "application/json" },
 });

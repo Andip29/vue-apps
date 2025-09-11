@@ -1,15 +1,16 @@
 <script setup>
 import { onMounted, reactive, ref, watch } from "vue";
-import { useRouter, useRoute } from "vue-router";
+import { useRouter } from "vue-router";
 import { useBandwithStore } from "../../../stores/bandwith";
 
 const router = useRouter();
-const route = useRoute();
 const store = useBandwithStore();
 
-const uuid = route.params.uuid;
-const errorMsg = ref("");
+// Ambil UUID dari props (router sudah props: true)
 const props = defineProps({ uuid: { type: String, required: true } });
+
+const errorMsg = ref("");
+const editId = ref(null); // kalau backend update pakai :id
 
 const form = reactive({
   name: "",
@@ -24,6 +25,7 @@ const form = reactive({
   is_active: 1,
 });
 
+// Di halaman Edit, jangan timpa unit dari server saat mount
 watch(
   () => form.upload_min_unit,
   (u) => {
@@ -31,25 +33,28 @@ watch(
     form.download_min_unit = u;
     form.download_max_unit = u;
   },
-  { immediate: true }
+  { immediate: false } // ← penting di Edit
 );
 
 onMounted(async () => {
   try {
-    await store.getOne(uuid);
+    await store.getOne(props.uuid);
     const d = store.current;
-    if (d) {
-      form.name = d.name;
-      form.upload_min = d.upload_min;
-      form.upload_max = d.upload_max;
-      form.download_min = d.download_min;
-      form.download_max = d.download_max;
-      form.upload_min_unit = d.upload_min_unit || "mbps";
-      form.upload_max_unit = d.upload_max_unit || form.upload_min_unit;
-      form.download_min_unit = d.download_min_unit || form.upload_min_unit;
-      form.download_max_unit = d.download_max_unit || form.upload_min_unit;
-      form.is_active = d.is_active ?? 1;
-    }
+    if (!d) throw new Error("Data tidak ditemukan");
+
+    // kalau backend update pakai id numeric:
+    editId.value = d.id ?? null;
+
+    form.name = d.name;
+    form.upload_min = d.upload_min;
+    form.upload_max = d.upload_max;
+    form.download_min = d.download_min;
+    form.download_max = d.download_max;
+    form.upload_min_unit = d.upload_min_unit || "mbps";
+    form.upload_max_unit = d.upload_max_unit || form.upload_min_unit;
+    form.download_min_unit = d.download_min_unit || form.upload_min_unit;
+    form.download_max_unit = d.download_max_unit || form.upload_min_unit;
+    form.is_active = d.is_active ?? 1;
   } catch (e) {
     errorMsg.value =
       store.error ||
@@ -62,7 +67,23 @@ onMounted(async () => {
 async function onSubmit() {
   errorMsg.value = "";
   try {
-    await store.update(uuid, form);
+    const unit = form.upload_min_unit;
+    const payload = {
+      ...form,
+      upload_max_unit: unit,
+      download_min_unit: unit,
+      download_max_unit: unit,
+    };
+
+    // === PILIH SALAH SATU SESUAI STORE-MU ===
+
+    // 1) Jika store.update(uuid, payload) memang ada dan backend terima UUID:
+    await store.update(props.uuid, payload);
+
+    // 2) Kalau backend update pakai id numeric: /master/bandwith/update/:id
+    // if (!editId.value) throw new Error("ID internal tidak tersedia");
+    // await store.updateById(editId.value, payload);
+
     router.push({ name: "bandwith-list" });
   } catch (e) {
     errorMsg.value =
@@ -72,10 +93,6 @@ async function onSubmit() {
       "Gagal menyimpan perubahan";
   }
 }
-
-onMounted(() => {
-  store.getOne(props.uuid);
-});
 </script>
 
 <template>
@@ -155,9 +172,9 @@ onMounted(() => {
             <input
               class="form-check-input"
               type="checkbox"
-              :checked="form.is_active === 1"
-              @change="form.is_active = $event.target.checked ? 1 : 0"
-              id="isActive"
+              v-model="form.is_active"
+              true-value="1"
+              false-value="0"
             />
             <label class="form-check-label" for="isActive">Aktif</label>
           </div>

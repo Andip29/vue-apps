@@ -7,8 +7,11 @@ const route = useRoute();
 const isRouterSectionOpen = () => route.path.startsWith("/dashboard/router");
 const isOdpSectionOpen = () => route.path.startsWith("/dashboard/odp");
 const isOdcSectionOpen = () => route.path.startsWith("/dashboard/odc");
-const isBandwithSectionOpen = () => route.path.startsWith("/dashboard/bandwith");
-const isPacketProfileSectionOpen = () => route.path.startsWith("/dashboard/packetprofile");
+const isBandwithSectionOpen = () =>
+  route.path.startsWith("/dashboard/bandwith");
+const isPacketProfileSectionOpen = () =>
+  route.path.startsWith("/dashboard/packetprofile");
+const isOltSectionOpen = () => route.path.startsWith("/dashboard/olt");
 
 // Helper untuk item daun (leaf) per route name
 const isActiveByName = (name) => route.name === name;
@@ -427,6 +430,58 @@ const isActiveByName = (name) => route.name === name;
                       >
                         Badnwith-List
                       </router-link>
+                    </li>
+                  </ul>
+                </li>
+                <!--  -->
+                <!-- OLT nav -->
+                <li
+                  class="nav-parent"
+                  :class="{
+                    'nav-expanded nav-active': isOltSectionOpen(),
+                  }"
+                >
+                  <a class="nav-link" href="#">
+                    <i class="bx bx-cart-alt" aria-hidden="true"></i>
+                    <span>OLT</span>
+                  </a>
+                  <ul class="nav nav-children">
+                    <li :class="{ 'nav-active': isActiveByName('olt-list') }">
+                      <router-link class="nav-link" :to="{ name: 'olt-list' }">
+                        OLT-List
+                      </router-link>
+                    </li>
+                    <!-- OLT Card List -->
+                    <li
+                      :class="{
+                        'nav-active': [
+                          'olt-card-list',
+                          'olt-card-detail',
+                          'olt-card-edit',
+                        ].includes(route.name),
+                      }"
+                    >
+                      <router-link
+                        class="nav-link"
+                        :to="{ name: 'olt-card-list' }"
+                      >
+                        OLT-Card List
+                      </router-link>
+                    </li>
+                    <li
+                      :class="{
+                        'nav-active': [
+                          'olt-pon-port-list',
+                          'olt-pon-port-detail',
+                          'olt-pon-port-edit',
+                        ].includes(route.name),
+                      }"
+                    >
+                      <router-link
+                        class="nav-link"
+                        :to="{ name: 'olt-pon-port-list' }"
+                        >OLT-PON Port List</router-link
+                      >
                     </li>
                   </ul>
                 </li>

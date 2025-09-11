@@ -22,6 +22,22 @@ import BandwithCreate from "../components/master/bandwith/BandwithCreate.vue";
 import BandwithEdit from "../components/master/bandwith/BandwithEdit.vue";
 import PacketProfileLayout from "../components/master/packetprofile/PacketProfileLayout.vue";
 import PacketProfileList from "../components/master/packetprofile/PacketProfileList.vue";
+import OltLayout from "../components/master/olts/OltLayout.vue";
+import OltList from "../components/master/olts/OltList.vue";
+import OltEdit from "../components/master/olts/OltEdit.vue";
+import OltCreate from "../components/master/olts/OltCreate.vue";
+import OltDetail from "../components/master/olts/OltDetail.vue";
+import BandwithDetail from "../components/master/bandwith/BandwithDetail.vue";
+import OltCardLayout from "../components/master/olt-card/OltCardLayout.vue";
+import OltCardList from "../components/master/olt-card/OltCardList.vue";
+import OltCardCreate from "../components/master/olt-card/OltCardCreate.vue";
+import OltCardEdit from "../components/master/olt-card/OltCardEdit.vue";
+import OltCardDetail from "../components/master/olt-card/OltCardDetail.vue";
+import OltPonPortLayout from "../components/master/olt-pon-card/OltPonPortLayout.vue";
+import OltPonPortList from "../components/master/olt-pon-card/OltPonPortList.vue";
+import OltPonPortDetail from "../components/master/olt-pon-card/OltPonPortDetail.vue";
+import OltPonPortEdit from "../components/master/olt-pon-card/OltPonPortEdit.vue";
+import OltPonPortCreate from "../components/master/olt-pon-card/OltPonPortCreate.vue";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -163,35 +179,125 @@ const router = createRouter({
         },
         {
           path: "olt",
-          component: OdpLayout,
+          component: OltLayout,
           name: "olt",
           meta: { title: "OLTs", breadcrumb: "OLT" },
           children: [
             { path: "olt", redirect: { name: "olt-list" } },
             {
               path: "list",
-              component: OdpList,
+              component: OltList,
               name: "olt-list",
               meta: { title: "List OLT", breadcrumb: "OLT-List" },
             },
-            // {
-            //   path: "edit",
-            //   component: RouterEdit,
-            //   name: "olt-edit",
-            //   // meta: {title: 'Edit Router', breadcrumb: (route) => `Edit #${route.params.id}`},
-            // },
-            // {
-            //   path: "detail",
-            //   component: OdpDetail,
-            //   name: "olt-detail",
-            //   meta: { title: "Detail OLT", breadcrumb: "OLT-Detail" },
-            // },
-            // {
-            //   path: "create",
-            //   component: RouterCreate,
-            //   name: "olt-create",
-            //   meta: { title: "OLT Router", breadcrumb: "OLT-Create" },
-            // },
+            {
+              path: "detail/:uuid",
+              component: OltDetail,
+              name: "olt-detail",
+              props: true,
+              meta: { title: "Detail OLT", breadcrumb: "OLT-Detail" },
+            },
+            {
+              path: "edit/:uuid",
+              component: OltEdit,
+              name: "olt-edit",
+              props: true,
+              meta: { title: "Edit OLT", breadcrumb: "OLT-Edit" },
+            },
+            {
+              path: "create",
+              component: OltCreate,
+              name: "olt-create",
+              meta: { title: "Create OLT", breadcrumb: "OLT-Create" },
+            },
+            {
+              path: "card",
+              component: OltCardLayout,
+              name: "olt-card",
+              meta: { title: "OLT Cards", breadcrumb: "OLT-Card" },
+              children: [
+                { path: "card", redirect: { name: "olt-card-list" } },
+                {
+                  path: "list",
+                  component: OltCardList,
+                  name: "olt-card-list",
+                  meta: { title: "List OLT Card", breadcrumb: "OLT-Card-List" },
+                },
+                {
+                  path: "detail/:uuid",
+                  component: OltCardDetail,
+                  name: "olt-card-detail",
+                  props: true,
+                  meta: {
+                    title: "Detail OLT Card",
+                    breadcrumb: "OLT-Card-Detail",
+                  },
+                },
+                {
+                  path: "edit/:uuid",
+                  component: OltCardEdit,
+                  name: "olt-card-edit",
+                  props: true,
+                  meta: { title: "Edit OLT Card", breadcrumb: "OLT-Card-Edit" },
+                },
+                {
+                  path: "create",
+                  component: OltCardCreate,
+                  name: "olt-card-create",
+                  meta: {
+                    title: "Create OLT Card",
+                    breadcrumb: "OLT-Card-Create",
+                  },
+                },
+              ],
+            },
+            {
+              path: "pon-port",
+              component: OltPonPortLayout,
+              name: "olt-pon-port",
+              meta: { title: "OLT PON Ports", breadcrumb: "OLT-Pon-Port" },
+              children: [
+                { path: "pon-port", redirect: { name: "olt-pon-port-list" } },
+                {
+                  path: "list",
+                  component: OltPonPortList,
+                  name: "olt-pon-port-list",
+                  meta: {
+                    title: "List OLT PON Port",
+                    breadcrumb: "OLT-Pon-Port-List",
+                  },
+                },
+                {
+                  path: "detail/:uuid",
+                  component: OltPonPortDetail,
+                  name: "olt-pon-port-detail",
+                  props: true,
+                  meta: {
+                    title: "Detail OLT PON Port",
+                    breadcrumb: "OLT-Pon-Port-Detail",
+                  },
+                },
+                {
+                  path: "edit/:uuid",
+                  component: OltPonPortEdit,
+                  name: "olt-pon-port-edit",
+                  props: true,
+                  meta: {
+                    title: "Edit OLT PON Port",
+                    breadcrumb: "OLT-Pon-Port-Edit",
+                  },
+                },
+                {
+                  path: "create",
+                  component: OltPonPortCreate,
+                  name: "olt-pon-port-create",
+                  meta: {
+                    title: "Create OLT PON Port",
+                    breadcrumb: "OLT-Pon-Port-Create",
+                  },
+                },
+              ],
+            },
           ],
         },
         {
@@ -206,6 +312,12 @@ const router = createRouter({
               component: BandwithList,
               name: "bandwith-list",
               meta: { title: "List Bandwith", breadcrumb: "Bandwith-List" },
+            },
+            {
+              path: "detail/:uuid",
+              component: BandwithDetail,
+              name: "bandwith-detail",
+              meta: { title: "Detail Bandwith", breadcrumb: "Bandwith-Detail" },
             },
             {
               path: "create",
@@ -245,6 +357,7 @@ const router = createRouter({
     // packet-profile
   ],
 });
+// Guard auth
 router.beforeEach((to, from, next) => {
   const isAuth = !!localStorage.getItem("token");
   if (to.matched.some((r) => r.meta?.requiresAuth) && !isAuth) {
@@ -256,7 +369,9 @@ router.beforeEach((to, from, next) => {
   next();
 });
 
+// Re-init Porto UI after each navigation
 router.afterEach(() => {
   setTimeout(() => window.Porto?.initAll?.(document), 0);
 });
+
 export default router;
