@@ -11,6 +11,8 @@ const isBandwithSectionOpen = () =>
   route.path.startsWith("/dashboard/bandwith");
 const isPacketProfileSectionOpen = () =>
   route.path.startsWith("/dashboard/packetprofile");
+const isGroupProfileSectionOpen = () =>
+  route.path.startsWith("/dashboard/groupprofile");
 const isOltSectionOpen = () => route.path.startsWith("/dashboard/olt");
 
 // Helper untuk item daun (leaf) per route name
@@ -382,7 +384,7 @@ const isActiveByName = (name) => route.name === name;
                   :class="{ 'nav-expanded nav-active': isRouterSectionOpen() }"
                 >
                   <a class="nav-link" href="#">
-                    <i class="bx bx-cart-alt" aria-hidden="true"></i>
+                    <i class="bx bx-wifi-2" aria-hidden="true"></i>
                     <span>Router</span>
                   </a>
                   <ul class="nav nav-children">
@@ -417,7 +419,7 @@ const isActiveByName = (name) => route.name === name;
                   }"
                 >
                   <a class="nav-link" href="#">
-                    <i class="bx bx-cart-alt" aria-hidden="true"></i>
+                    <i class="bx bx-tachometer" aria-hidden="true"></i>
                     <span>Bandwith</span>
                   </a>
                   <ul class="nav nav-children">
@@ -442,7 +444,7 @@ const isActiveByName = (name) => route.name === name;
                   }"
                 >
                   <a class="nav-link" href="#">
-                    <i class="bx bx-cart-alt" aria-hidden="true"></i>
+                    <i class="bx bx-box" aria-hidden="true"></i>
                     <span>OLT</span>
                   </a>
                   <ul class="nav nav-children">
@@ -494,20 +496,47 @@ const isActiveByName = (name) => route.name === name;
                   }"
                 >
                   <a class="nav-link" href="#">
-                    <i class="bx bx-cart-alt" aria-hidden="true"></i>
+                    <i class="bx bx-package" aria-hidden="true"></i>
                     <span>Packet Profile</span>
                   </a>
                   <ul class="nav nav-children">
                     <li
                       :class="{
-                        'nav-active': isActiveByName('packetprofile-list'),
+                        'nav-active': isActiveByName('packet-profile-list'),
                       }"
                     >
                       <router-link
                         class="nav-link"
-                        :to="{ name: 'packetprofile-list' }"
+                        :to="{ name: 'packet-profile-list' }"
                       >
                         Packet List
+                      </router-link>
+                    </li>
+                  </ul>
+                </li>
+                <!--  -->
+                <!-- Groupprofile nav -->
+                <li
+                  class="nav-parent"
+                  :class="{
+                    'nav-expanded nav-active': isGroupProfileSectionOpen(),
+                  }"
+                >
+                  <a class="nav-link" href="#">
+                    <i class="bx bx-cart-alt" aria-hidden="true"></i>
+                    <span>Group Profile</span>
+                  </a>
+                  <ul class="nav nav-children">
+                    <li
+                      :class="{
+                        'nav-active': isActiveByName('group-profile-list'),
+                      }"
+                    >
+                      <router-link
+                        class="nav-link"
+                        :to="{ name: 'group-profile-list' }"
+                      >
+                        Group List
                       </router-link>
                     </li>
                   </ul>

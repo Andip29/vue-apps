@@ -4,11 +4,11 @@ import DashboardLayout from "../layouts/DashboardLayout.vue";
 
 import UserRegister from "../components/auth/UserRegister.vue";
 import UserLogin from "../components/auth/UserLogin.vue";
-import Routerlayout from "../components/routers/RouterLayout.vue";
-import RouterList from "../components/routers/RouterList.vue";
-import RouterCreate from "../components/routers/RouterCreate.vue";
-import RouterEdit from "../components/routers/RouterEdit.vue";
-import RouterDetail from "../components/routers/RouterDetail.vue";
+import RouterLayout from "../components/master/router/RouterLayout.vue";
+import RouterList from "../components/master/router/RouterList.vue";
+import RouterDetail from "../components/master/router/RouterDetail.vue";
+import RouterEdit from "../components/master/router/RouterEdit.vue";
+import RouterCreate from "../components/master/router/RouterCreate.vue";
 import OdpLayout from "../components/odps/OdpLayout.vue";
 import OdpList from "../components/odps/OdpList.vue";
 import OdpDetail from "../components/odps/OdpDetail.vue";
@@ -38,6 +38,14 @@ import OltPonPortList from "../components/master/olt-pon-card/OltPonPortList.vue
 import OltPonPortDetail from "../components/master/olt-pon-card/OltPonPortDetail.vue";
 import OltPonPortEdit from "../components/master/olt-pon-card/OltPonPortEdit.vue";
 import OltPonPortCreate from "../components/master/olt-pon-card/OltPonPortCreate.vue";
+import PacketProfileDetail from "../components/master/packetprofile/PacketProfileDetail.vue";
+import PacketProfileCreate from "../components/master/packetprofile/PacketProfileCreate.vue";
+import PacketProfileEdit from "../components/master/packetprofile/PacketProfileEdit.vue";
+import GroupProfileList from "../components/master/group-profile/GroupProfileList.vue";
+import GroupProfileLayout from "../components/master/group-profile/GroupProfileLayout.vue";
+import GroupProfileDetail from "../components/master/group-profile/GroupProfileDetail.vue";
+import GroupProfileEdit from "../components/master/group-profile/GroupProfileEdit.vue";
+import GroupProfileCreate from "../components/master/group-profile/GroupProfileCreate.vue";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -81,7 +89,7 @@ const router = createRouter({
       children: [
         {
           path: "router",
-          component: Routerlayout,
+          component: RouterLayout,
           name: "router",
           meta: { title: "Routers", breadcrumb: "Router" },
           children: [
@@ -93,15 +101,18 @@ const router = createRouter({
               meta: { title: "List Router", breadcrumb: "Router-List" },
             },
             {
-              path: "edit",
+              path: "edit/:uuid",
               component: RouterEdit,
               name: "router-edit",
-              // meta: {title: 'Edit Router', breadcrumb: (route) => `Edit #${route.params.id}`},
+              props: true,
+              meta: { title: "Edit Router", breadcrumb: "Router-Edit" },
             },
             {
-              path: "detail",
+              path: "detail/:uuid",
               component: RouterDetail,
               name: "router-detail",
+              props: true,
+              meta: { title: "Edit Router", breadcrumb: "Router-Edit" },
             },
             {
               path: "create",
@@ -330,23 +341,107 @@ const router = createRouter({
               name: "bandwith-edit",
               component: BandwithEdit,
               props: true,
+              meta: {
+                title: "Edit Bandwith",
+                breadcrumb: "Bandwith-Edit",
+              },
             },
           ],
         },
         {
           path: "packetprofile",
           component: PacketProfileLayout,
-          name: "packetprofile",
+          name: "packet-profile",
           meta: { title: "Packet Profiles", breadcrumb: "Packet Profile" },
           children: [
-            { path: "packetprofile", redirect: { name: "packetprofile-list" } },
+            {
+              path: "packet-profile",
+              redirect: { name: "packet-profile-list" },
+            },
             {
               path: "list",
               component: PacketProfileList,
-              name: "packetprofile-list",
+              name: "packet-profile-list",
               meta: {
                 title: "List Packet Profile",
                 breadcrumb: "PacketProfile-List",
+              },
+            },
+            {
+              path: "detail/:uuid",
+              component: PacketProfileDetail,
+              name: "packet-profile-detail",
+              meta: {
+                title: "Detail Packet-Profile",
+                breadcrumb: "Packet-Profile-Detail",
+              },
+            },
+            {
+              path: "create",
+              component: PacketProfileCreate,
+              name: "packet-profile-create",
+              meta: {
+                title: "Create Packet-Profile",
+                breadcrumb: "Packet-Profile-Create",
+              },
+            },
+            {
+              path: "edit/:uuid",
+              name: "packet-profile-edit",
+              component: PacketProfileEdit,
+              props: true,
+              meta: {
+                title: "Edit Packet-Profile",
+                breadcrumb: "Packet-Profile-Edit",
+              },
+            },
+          ],
+        },
+        {
+          path: "groupprofile",
+          component: GroupProfileLayout,
+          name: "group-profile",
+          meta: { title: "Group Profiles", breadcrumb: "Group Profile" },
+          children: [
+            {
+              path: "group-profile",
+              redirect: { name: "group-profile-list" },
+            },
+            {
+              path: "list",
+              component: GroupProfileList,
+              name: "group-profile-list",
+              meta: {
+                title: "List group Profile",
+                breadcrumb: "groupProfile-List",
+              },
+            },
+            {
+              path: "detail/:uuid",
+              component: GroupProfileDetail,
+              name: "group-profile-detail",
+              meta: {
+                title: "Detail group-Profile",
+                breadcrumb: "group-Profile-Detail",
+              },
+            },
+            {
+              path: "create",
+              component: GroupProfileCreate,
+              name: "group-profile-create",
+              meta: {
+                title: "Create group-Profile",
+                breadcrumb: "group-Profile-Create",
+              },
+            },
+            {
+              path: "edit/:uuid",
+              name: "group-profile-edit",
+              component: GroupProfileEdit,
+              props: true,
+              meta: {
+                title: "Edit group-Profile",
+                breadcrumb: "group-Profile-Edit",
               },
             },
           ],

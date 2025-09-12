@@ -1,28 +1,33 @@
+// src/stores/groupProfile.js
 import { defineStore } from "pinia";
 import http from "../lib/api/http";
 
-const BASE = "/master/packet-profile"; // root endpoint
+const BASE = "/master/group-profile";
 
 const to01 = (v) => (v === 1 || v === "1" || v === true ? 1 : 0);
-const toNumOrNull = (v) => {
-  if (v === "" || v === null || v === undefined) return null;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-};
 
 function sanitize(p = {}) {
   const obj = { ...p };
-  ["uuid", "router_uuid", "name"].forEach((k) => {
+
+  [
+    "uuid",
+    "name",
+    "type",
+    "parent_pool",
+    "module",
+    "ip_local",
+    "first_ip",
+    "last_ip",
+    "router_uuid", // opsional: kalau backend mendukung filter per router
+  ].forEach((k) => {
     if (obj[k] != null) obj[k] = String(obj[k]).trim();
   });
-  if (obj.base_cost !== undefined) obj.base_cost = toNumOrNull(obj.base_cost);
-  if (obj.price !== undefined) obj.price = toNumOrNull(obj.price);
-  if (obj.ppn !== undefined) obj.ppn = toNumOrNull(obj.ppn); // persen
+
   if (obj.is_active !== undefined) obj.is_active = to01(obj.is_active);
   return obj;
 }
 
-export const usePacketProfileStore = defineStore("packetProfile", {
+export const useGroupProfileStore = defineStore("groupProfile", {
   state: () => ({
     items: [],
     meta: {
@@ -45,7 +50,7 @@ export const usePacketProfileStore = defineStore("packetProfile", {
   }),
 
   actions: {
-    // GET /master/packet-profile?limit=&page=&router_uuid[&search]
+    // GET /master/group-profile?limit=&page=[&router_uuid][&search]
     async fetchList({
       page = 1,
       limit = 10,
@@ -67,21 +72,28 @@ export const usePacketProfileStore = defineStore("packetProfile", {
         this.error =
           e?.response?.data?.message ||
           e.message ||
-          "Gagal memuat Packet Profile";
+          "Gagal memuat Group Profile";
         throw e;
       } finally {
         this.loadingList = false;
       }
     },
 
-    // opsional jika backend menyediakan: GET /master/packet-profile/list-details
-    async fetchListDetails({ page = 1, limit = 10, router_uuid = "" } = {}) {
+    // OPTIONAL: beberapa backend punya /list-detail(s)
+    async fetchListDetail({ page = 1, limit = 10, router_uuid = "" } = {}) {
       this.loadingList = true;
       this.error = null;
       try {
-        const { data } = await http.get(`${BASE}/list-details`, {
-          params: { page, limit, router_uuid },
-        });
+        const params = { page, limit };
+        if (router_uuid) params.router_uuid = router_uuid;
+
+        // coba /list-detail lalu /list-details
+        let res = await http
+          .get(`${BASE}/list-detail`, { params })
+          .catch(() => null);
+        if (!res) res = await http.get(`${BASE}/list-details`, { params });
+
+        const data = res?.data;
         this.items = data?.data ?? [];
         this.meta = data?.meta ?? this.meta;
         return this.items;
@@ -89,27 +101,29 @@ export const usePacketProfileStore = defineStore("packetProfile", {
         this.error =
           e?.response?.data?.message ||
           e.message ||
-          "Gagal memuat Packet Profile (detail list)";
+          "Gagal memuat Group Profile (detail list)";
         throw e;
       } finally {
         this.loadingList = false;
       }
     },
 
-    // Detail: tahan beberapa pola (/:id, /detail/:id, /show/:id)
+    // DETAIL: tahan beberapa pola
     async getOne(uuid) {
       this.loadingOne = true;
       this.error = null;
       try {
         if (!uuid) throw new Error("UUID kosong/invalid");
         const id = String(uuid);
+
         const candidates = [
           `${BASE}/${id}`,
           `${BASE}/detail/${id}`,
           `${BASE}/show/${id}`,
         ];
-        let item = null,
-          lastErr = null;
+
+        let item = null;
+        let lastErr = null;
 
         for (const url of candidates) {
           try {
@@ -141,14 +155,14 @@ export const usePacketProfileStore = defineStore("packetProfile", {
         this.error =
           e?.response?.data?.message ||
           e.message ||
-          "Gagal memuat detail Packet Profile";
+          "Gagal memuat detail Group Profile";
         throw e;
       } finally {
         this.loadingOne = false;
       }
     },
 
-    // POST /master/packet-profile/create
+    // POST /master/group-profile/create
     async create(payload) {
       this.saving = true;
       this.error = null;
@@ -168,20 +182,29 @@ export const usePacketProfileStore = defineStore("packetProfile", {
         this.error =
           e?.response?.data?.message ||
           e.message ||
-          "Gagal membuat Packet Profile";
+          "Gagal membuat Group Profile";
         throw e;
       } finally {
         this.saving = false;
       }
     },
 
-    // PUT /master/packet-profile/update/:id   (sesuai screenshot Postman)
+    // PUT /master/group-profile/update/:id  (kalau server pakai POST, kita fallback)
     async update(uuid, payload) {
       this.saving = true;
       this.error = null;
       try {
         const body = sanitize(payload);
-        await http.put(`${BASE}/update/${uuid}`, body);
+        try {
+          await http.put(`${BASE}/update/${uuid}`, body);
+        } catch (err) {
+          // fallback bila server ternyata pakai POST untuk update
+          if (err?.response?.status === 405) {
+            await http.post(`${BASE}/update/${uuid}`, body);
+          } else {
+            throw err;
+          }
+        }
 
         const idx = this.items.findIndex(
           (x) => String(x.uuid) === String(uuid)
@@ -194,7 +217,7 @@ export const usePacketProfileStore = defineStore("packetProfile", {
         this.error =
           e?.response?.data?.message ||
           e.message ||
-          "Gagal memperbarui Packet Profile";
+          "Gagal memperbarui Group Profile";
         throw e;
       } finally {
         this.saving = false;
@@ -210,13 +233,14 @@ export const usePacketProfileStore = defineStore("packetProfile", {
         this.items = this.items.filter(
           (it) => String(it.uuid) !== String(uuid)
         );
-        if (this.current?.uuid && String(this.current.uuid) === String(uuid))
+        if (this.current?.uuid && String(this.current.uuid) === String(uuid)) {
           this.current = null;
+        }
       } catch (e) {
         this.error =
           e?.response?.data?.message ||
           e.message ||
-          "Gagal menghapus Packet Profile";
+          "Gagal menghapus Group Profile";
         throw e;
       } finally {
         this.removing = false;
@@ -235,14 +259,14 @@ export const usePacketProfileStore = defineStore("packetProfile", {
         this.error =
           e?.response?.data?.message ||
           e.message ||
-          "Gagal menghapus banyak Packet Profile";
+          "Gagal menghapus banyak Group Profile";
         throw e;
       } finally {
         this.removing = false;
       }
     },
 
-    // POST /master/packet-profile/sync (opsional)
+    // POST /master/group-profile/sync (opsional)
     async trySync(payload = {}) {
       if (!this.canSync) return null;
       const id = payload?.uuid ? String(payload.uuid) : null;

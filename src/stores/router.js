@@ -1,28 +1,60 @@
+// src/stores/router.js
 import { defineStore } from "pinia";
 import http from "../lib/api/http";
 
-const BASE = "/master/packet-profile"; // root endpoint
+const BASE = "/master/router";
 
+// helpers
 const to01 = (v) => (v === 1 || v === "1" || v === true ? 1 : 0);
-const toNumOrNull = (v) => {
-  if (v === "" || v === null || v === undefined) return null;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-};
 
-function sanitize(p = {}) {
+function sanitizePayload(p = {}) {
   const obj = { ...p };
-  ["uuid", "router_uuid", "name"].forEach((k) => {
+  [
+    "uuid",
+    "code",
+    "brand",
+    "location",
+    "latitude",
+    "longitude",
+    "ip_address",
+    "username",
+    "password",
+    "community",
+    "port",
+    "ip_address_radius",
+    "secret_radius",
+  ].forEach((k) => {
     if (obj[k] != null) obj[k] = String(obj[k]).trim();
   });
-  if (obj.base_cost !== undefined) obj.base_cost = toNumOrNull(obj.base_cost);
-  if (obj.price !== undefined) obj.price = toNumOrNull(obj.price);
-  if (obj.ppn !== undefined) obj.ppn = toNumOrNull(obj.ppn); // persen
   if (obj.is_active !== undefined) obj.is_active = to01(obj.is_active);
   return obj;
 }
 
-export const usePacketProfileStore = defineStore("packetProfile", {
+// optional: kirim multipart bila ada file[] yang diupload
+function toFormDataIfFiles(payload = {}) {
+  const files = payload.files || payload.file || payload["file[]"];
+  const hasFiles =
+    (Array.isArray(files) && files.length) ||
+    (typeof File !== "undefined" && files instanceof File);
+
+  if (!hasFiles) return null;
+
+  const fd = new FormData();
+  const body = sanitizePayload(payload);
+  Object.entries(body).forEach(([k, v]) => {
+    if (v !== undefined && v !== null) fd.append(k, v);
+  });
+
+  // dukung berbagai bentuk
+  if (Array.isArray(files)) {
+    files.forEach((f) => f && fd.append("file[]", f));
+  } else if (files) {
+    fd.append("file[]", files);
+  }
+  return fd;
+}
+
+export const useRouterStore = defineStore("routerMaster", {
   state: () => ({
     items: [],
     meta: {
@@ -41,80 +73,54 @@ export const usePacketProfileStore = defineStore("packetProfile", {
     removing: false,
     error: null,
 
+    // NEW: flag untuk mematikan sync bila endpoint error (404/405/500)
     canSync: true,
   }),
 
   actions: {
-    // GET /master/packet-profile?limit=&page=&router_uuid[&search]
-    async fetchList({
-      page = 1,
-      limit = 10,
-      router_uuid = "",
-      search = "",
-    } = {}) {
+    // GET /master/router?limit=&page=&search?
+    async fetchList({ page = 1, limit = 10, search = "" } = {}) {
       this.loadingList = true;
       this.error = null;
       try {
         const params = { page, limit };
-        if (router_uuid) params.router_uuid = router_uuid;
         if (search) params.search = search;
-
         const { data } = await http.get(BASE, { params });
         this.items = data?.data ?? [];
         this.meta = data?.meta ?? this.meta;
         return this.items;
       } catch (e) {
         this.error =
-          e?.response?.data?.message ||
-          e.message ||
-          "Gagal memuat Packet Profile";
+          e?.response?.data?.message || e.message || "Gagal memuat Router";
         throw e;
       } finally {
         this.loadingList = false;
       }
     },
 
-    // opsional jika backend menyediakan: GET /master/packet-profile/list-details
-    async fetchListDetails({ page = 1, limit = 10, router_uuid = "" } = {}) {
-      this.loadingList = true;
-      this.error = null;
-      try {
-        const { data } = await http.get(`${BASE}/list-details`, {
-          params: { page, limit, router_uuid },
-        });
-        this.items = data?.data ?? [];
-        this.meta = data?.meta ?? this.meta;
-        return this.items;
-      } catch (e) {
-        this.error =
-          e?.response?.data?.message ||
-          e.message ||
-          "Gagal memuat Packet Profile (detail list)";
-        throw e;
-      } finally {
-        this.loadingList = false;
-      }
-    },
-
-    // Detail: tahan beberapa pola (/:id, /detail/:id, /show/:id)
+    // DETAIL: coba beberapa pola supaya tahan perbedaan backend
     async getOne(uuid) {
       this.loadingOne = true;
       this.error = null;
+
       try {
         if (!uuid) throw new Error("UUID kosong/invalid");
+
         const id = String(uuid);
         const candidates = [
-          `${BASE}/${id}`,
-          `${BASE}/detail/${id}`,
-          `${BASE}/show/${id}`,
+          `${BASE}/${id}`, // sesuai dokumenmu
+          `${BASE}/detail/${id}`, // jika server expose /detail/:id
+          `${BASE}/show/${id}`, // fallback (seperti di OLT)
         ];
-        let item = null,
-          lastErr = null;
+
+        let item = null;
+        let lastErr = null;
 
         for (const url of candidates) {
           try {
             const { data } = await http.get(url);
             const payload = data?.data ?? data ?? null;
+
             if (
               payload &&
               typeof payload === "object" &&
@@ -123,16 +129,23 @@ export const usePacketProfileStore = defineStore("packetProfile", {
               item = payload;
               break;
             }
+            if (Array.isArray(payload)) {
+              item = payload.find((x) => String(x?.uuid) === id) || null;
+              if (item) break;
+            }
           } catch (err) {
             lastErr = err;
             const code = err?.response?.status;
+            // kalau bukan 404, lempar langsung
             if (code && code !== 404) throw err;
           }
         }
 
+        // fallback terakhir dari cache list
         if (!item && this.items?.length) {
-          item = this.items.find((x) => String(x.uuid) === id) || null;
+          item = this.items.find((x) => String(x.uuid) === String(id)) || null;
         }
+
         if (!item) throw lastErr || new Error("Record not found");
 
         this.current = item;
@@ -141,20 +154,25 @@ export const usePacketProfileStore = defineStore("packetProfile", {
         this.error =
           e?.response?.data?.message ||
           e.message ||
-          "Gagal memuat detail Packet Profile";
+          "Gagal memuat detail Router";
         throw e;
       } finally {
         this.loadingOne = false;
       }
     },
 
-    // POST /master/packet-profile/create
+    // CREATE
     async create(payload) {
       this.saving = true;
       this.error = null;
       try {
-        const body = sanitize(payload);
-        const res = await http.post(`${BASE}/create`, body);
+        const fd = toFormDataIfFiles(payload);
+        const body = fd || sanitizePayload(payload);
+        const headers = fd
+          ? { headers: { "Content-Type": "multipart/form-data" } }
+          : undefined;
+
+        const res = await http.post(`${BASE}/create`, body, headers);
         const newItem = res?.data?.data ?? res?.data ?? null;
 
         if (newItem) {
@@ -166,35 +184,42 @@ export const usePacketProfileStore = defineStore("packetProfile", {
         return newItem;
       } catch (e) {
         this.error =
-          e?.response?.data?.message ||
-          e.message ||
-          "Gagal membuat Packet Profile";
+          e?.response?.data?.message || e.message || "Gagal membuat Router";
         throw e;
       } finally {
         this.saving = false;
       }
     },
 
-    // PUT /master/packet-profile/update/:id   (sesuai screenshot Postman)
+    // UPDATE (POST /master/router/update/:id)
     async update(uuid, payload) {
       this.saving = true;
       this.error = null;
       try {
-        const body = sanitize(payload);
-        await http.put(`${BASE}/update/${uuid}`, body);
+        const fd = toFormDataIfFiles(payload);
+        const body = fd || sanitizePayload(payload);
+        const headers = fd
+          ? { headers: { "Content-Type": "multipart/form-data" } }
+          : undefined;
 
+        await http.post(`${BASE}/update/${uuid}`, body, headers);
+
+        // sinkron state lokal
         const idx = this.items.findIndex(
           (x) => String(x.uuid) === String(uuid)
         );
-        if (idx !== -1) this.items[idx] = { ...this.items[idx], ...body, uuid };
+        if (idx !== -1)
+          this.items[idx] = {
+            ...this.items[idx],
+            ...sanitizePayload(payload),
+            uuid,
+          };
         if (this.current && String(this.current.uuid) === String(uuid)) {
-          this.current = { ...this.current, ...body };
+          this.current = { ...this.current, ...sanitizePayload(payload) };
         }
       } catch (e) {
         this.error =
-          e?.response?.data?.message ||
-          e.message ||
-          "Gagal memperbarui Packet Profile";
+          e?.response?.data?.message || e.message || "Gagal memperbarui Router";
         throw e;
       } finally {
         this.saving = false;
@@ -210,13 +235,12 @@ export const usePacketProfileStore = defineStore("packetProfile", {
         this.items = this.items.filter(
           (it) => String(it.uuid) !== String(uuid)
         );
-        if (this.current?.uuid && String(this.current.uuid) === String(uuid))
+        if (this.current?.uuid && String(this.current.uuid) === String(uuid)) {
           this.current = null;
+        }
       } catch (e) {
         this.error =
-          e?.response?.data?.message ||
-          e.message ||
-          "Gagal menghapus Packet Profile";
+          e?.response?.data?.message || e.message || "Gagal menghapus Router";
         throw e;
       } finally {
         this.removing = false;
@@ -235,20 +259,23 @@ export const usePacketProfileStore = defineStore("packetProfile", {
         this.error =
           e?.response?.data?.message ||
           e.message ||
-          "Gagal menghapus banyak Packet Profile";
+          "Gagal menghapus banyak Router";
         throw e;
       } finally {
         this.removing = false;
       }
     },
 
-    // POST /master/packet-profile/sync (opsional)
-    async trySync(payload = {}) {
+    // NEW: sync "aman" — coba beberapa pola, auto-nonaktifkan kalau server error
+    async trySync({ uuid } = {}) {
       if (!this.canSync) return null;
-      const id = payload?.uuid ? String(payload.uuid) : null;
 
+      const id = uuid ? String(uuid) : null;
       const attempts = [];
+
+      // beberapa server expose /sync/:uuid
       if (id) attempts.push({ m: "post", url: `${BASE}/sync/${id}`, body: {} });
+      // sebagian lain /sync dengan payload { uuid }
       attempts.push({
         m: "post",
         url: `${BASE}/sync`,
@@ -261,15 +288,22 @@ export const usePacketProfileStore = defineStore("packetProfile", {
           return data?.data ?? data ?? null;
         } catch (e) {
           const s = e?.response?.status;
+          // kalau endpoint tidak ada / method salah / server error, coba alternatif
           if ([404, 405, 500].includes(s)) continue;
+          // error lain (401/403/network) bubble up
           throw e;
         }
       }
+
+      // semua percobaan gagal => matikan sync untuk sesi ini
       this.canSync = false;
       return null;
     },
+
+    // OPTIONAL: alias sync yang memakai trySync
     async sync(payload = {}) {
-      return this.trySync(payload);
+      const res = await this.trySync(payload);
+      return res;
     },
   },
 });
