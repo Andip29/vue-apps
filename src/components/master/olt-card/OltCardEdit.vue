@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, ref, onMounted, watch } from "vue";
+import { reactive, ref, onMounted, watch, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useOltCardStore } from "../../../stores/oltCard";
 
@@ -11,17 +11,21 @@ const uuid = ref(String(route.params.uuid || ""));
 const loading = ref(false);
 const errorMsg = ref("");
 
-// --- FORM STATE ---
+// ===== FORM (tanpa mengubah olt_uuid) =====
 const form = reactive({
-  olt_uuid: "",
+  // olt_uuid: "",
   code: "",
   slot_number: "",
   card_type: "",
   model: "",
-  is_active: 1, // 1/0 (biar konsisten dgn store sanitizePayload)
-  olt_pon_ports: [], // array of port objects
-  _deleted_ports: new Set(), // internal tracker untuk deletes
+  is_active: true,
+  olt_pon_ports: [],
+  _deleted_ports: new Set(),
 });
+
+// ringkasan saja (untuk badge dsb)
+const item = computed(() => store.current || null);
+const olt = computed(() => item.value?.olt ?? null);
 
 function clonePort(p = {}) {
   return {
@@ -30,26 +34,26 @@ function clonePort(p = {}) {
     is_active: p.is_active === true || p.is_active === 1 || p.is_active === "1",
     port_number: p.port_number ?? null,
     gpon_olt: p.gpon_olt ?? "",
-    txdbm: p.txdbm ?? null, // boleh null/number
-    endpoint: p.endpoint ?? "",
+    txdbm: p.txdbm ?? null, // nullable (number/null)
+    endpoint: p.endpoint ?? "", // nullable (string/null) — kita kirim null saat kosong
     latitude: p.latitude ?? "",
     longitude: p.longitude ?? "",
-    oid_code: p.oid_code ?? "",
+    oid_code: p.oid_code ?? "", // nullable
   };
 }
 
 function hydrate(it) {
-  form.olt_uuid = it.olt_uuid ?? it.olt?.uuid ?? "";
+  // form.olt_uuid = it.olt_uuid ?? it.olt?.uuid ?? ""; // readonly di UI bila ingin ditampilkan
   form.code = it.code ?? "";
   form.slot_number = it.slot_number ?? "";
   form.card_type = it.card_type ?? "";
   form.model = it.model ?? "";
   form.is_active =
-    it.is_active === 1 || it.is_active === "1" || it.is_active === true ? 1 : 0;
+    it.is_active === 1 || it.is_active === "1" || it.is_active === true;
 
   const ports = Array.isArray(it.olt_pon_ports) ? it.olt_pon_ports : [];
   form.olt_pon_ports = ports.map(clonePort);
-  form._deleted_ports = new Set(); // reset tracker
+  form._deleted_ports = new Set();
 }
 
 function toNumberOrNull(v) {
@@ -80,42 +84,40 @@ async function load() {
   }
 }
 
-// --- PORTS ACTIONS ---
+// ====== PORT ACTIONS ======
 function addPort() {
   form.olt_pon_ports.push(clonePort({ is_active: true, port_number: null }));
 }
 function removePortAt(idx) {
   const p = form.olt_pon_ports[idx];
-  if (p?.uuid) {
-    form._deleted_ports.add(String(p.uuid)); // tandai untuk deletes
-  }
+  if (p?.uuid) form._deleted_ports.add(String(p.uuid));
   form.olt_pon_ports.splice(idx, 1);
 }
 function togglePortActive(p, checked) {
   p.is_active = !!checked;
 }
 
-// --- SUBMIT ---
+// ====== SUBMIT (tanpa olt_uuid) ======
 async function onSubmit() {
   errorMsg.value = "";
   try {
+    // rakit payload sesuai contoh Postman
     const payload = {
-      olt_uuid: String(form.olt_uuid || "").trim(),
-      code: String(form.code || "").trim(),
       slot_number: toNumberOrNull(form.slot_number),
       card_type: String(form.card_type || "").trim(),
       model: String(form.model || "").trim(),
-      is_active: form.is_active, // 1/0 (store sanitizePayload akan rapihkan)
+      is_active: !!form.is_active, // boolean
+
       olt_pon_ports: form.olt_pon_ports.map((p) => ({
-        uuid: p.uuid || undefined, // biar yang baru (tanpa uuid) tidak kirim null
+        uuid: p.uuid || undefined, // undefined utk new row
         code: String(p.code || "").trim(),
-        is_active: !!p.is_active, // boolean sesuai contoh Postman
+        is_active: !!p.is_active,
         port_number: toNumberOrNull(p.port_number),
         gpon_olt: String(p.gpon_olt || "").trim(),
-        txdbm: toNumberOrNull(p.txdbm), // boleh null
+        txdbm: toNumberOrNull(p.txdbm), // nullable
         endpoint: String(p.endpoint || "").trim() || null, // nullable
-        latitude: String(p.latitude ?? ""), // string (sesuai Postman)
-        longitude: String(p.longitude ?? ""), // string
+        latitude: String(p.latitude ?? ""),
+        longitude: String(p.longitude ?? ""),
         oid_code: String(p.oid_code || "").trim() || null, // nullable
       })),
     };
@@ -161,22 +163,26 @@ watch(
       <div v-if="errorMsg" class="alert alert-danger">{{ errorMsg }}</div>
 
       <form v-if="!loading && !errorMsg" @submit.prevent="onSubmit">
+        <!-- Info OLT (readonly/informasi saja) -->
+        <div
+          class="alert alert-info d-flex align-items-center gap-2"
+          v-if="olt"
+        >
+          <i class="icons icon-info"></i>
+          <div>
+            <strong>OLT:</strong>
+            {{ olt.code || olt.name || "-" }}
+            <span v-if="olt.ip_address">— {{ olt.ip_address }}</span>
+          </div>
+        </div>
+
         <!-- Informasi Card -->
         <div class="row g-3">
           <div class="col-md-6">
-            <label class="form-label">OLT UUID</label>
-            <input
-              v-model.trim="form.olt_uuid"
-              type="text"
-              class="form-control"
-              required
-            />
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Code</label>
+            <label class="form-label">Code (opsional)</label>
             <input v-model.trim="form.code" type="text" class="form-control" />
           </div>
-          <div class="col-md-4">
+          <div class="col-md-3">
             <label class="form-label">Slot Number</label>
             <input
               v-model.number="form.slot_number"
@@ -186,17 +192,17 @@ watch(
               step="1"
             />
           </div>
-          <div class="col-md-4">
+          <div class="col-md-3">
+            <label class="form-label">Model</label>
+            <input v-model.trim="form.model" type="text" class="form-control" />
+          </div>
+          <div class="col-md-6">
             <label class="form-label">Card Type</label>
             <input
               v-model.trim="form.card_type"
               type="text"
               class="form-control"
             />
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">Model</label>
-            <input v-model.trim="form.model" type="text" class="form-control" />
           </div>
         </div>
 
@@ -205,8 +211,7 @@ watch(
             id="isActive"
             class="form-check-input"
             type="checkbox"
-            :checked="form.is_active === 1"
-            @change="form.is_active = $event.target.checked ? 1 : 0"
+            v-model="form.is_active"
           />
           <label class="form-check-label" for="isActive">Aktif</label>
         </div>
@@ -326,9 +331,8 @@ watch(
               </tbody>
             </table>
           </div>
-
-          <!-- indikator deletes (debug/optional) -->
-          <!-- <small class="text-muted">akan dihapus: {{ [...form._deleted_ports].join(', ') }}</small> -->
+          <!-- debug: port yang akan dihapus -->
+          <!-- <small class="text-muted">hapus: {{ [...form._deleted_ports].join(', ') }}</small> -->
         </div>
 
         <div class="mt-3">

@@ -9,21 +9,58 @@ import {
 } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useOltCardStore } from "../../../stores/oltCard";
+import { useOltStore } from "../../../stores/olt"; // dropdown OLT
 
 const route = useRoute();
 const router = useRouter();
 const store = useOltCardStore();
+const oltStore = useOltStore();
 
 const items = computed(() => store.items || []);
 const loading = computed(() => store.loadingList);
 const error = computed(() => store.error);
 
-// filter/query
+// dropdown OLT
+const olts = computed(() => oltStore.items || []);
 const oltUuid = ref(String(route.query.olt_uuid || ""));
 const search = ref(String(route.query.search || ""));
 
-const tableRef = ref(null);
+// DataTables helpers
+const tableId = "#datatable-olt-card";
 let dt = null;
+const tableKey = ref(0); // kunci re-render total table
+
+function initDataTable() {
+  const $ = window.jQuery;
+  if (!$?.fn?.DataTable) return;
+  if ($.fn.DataTable.isDataTable(tableId)) return;
+  dt = $(tableId).DataTable({
+    paging: true,
+    searching: true,
+    autoWidth: false,
+    order: [],
+    pageLength: 10,
+    lengthMenu: [
+      [10, 25, 50, -1],
+      [10, 25, 50, "Semua"],
+    ],
+    // atur layout supaya length & search bisa stack
+    dom:
+      "<'row'<'col-12 col-md-6'l><'col-12 col-md-6'f>>" +
+      "t" +
+      "<'row'<'col-12 col-md-6'i><'col-12 col-md-6'p>>",
+  });
+}
+
+function destroyDataTable() {
+  const $ = window.jQuery;
+  if (!$?.fn?.DataTable) return;
+  if ($.fn.DataTable.isDataTable(tableId)) {
+    // ✅ JANGAN gunakan .destroy(true) agar <table> tidak dihapus dari DOM
+    $(tableId).DataTable().clear().destroy();
+  }
+  dt = null;
+}
 
 function formatDate(v) {
   if (!v) return "-";
@@ -35,149 +72,173 @@ function formatDate(v) {
 }
 
 async function load() {
+  // 1) pastikan DT lama bersih
+  destroyDataTable();
+
+  // 2) fetch sesuai filter
   await store.fetchList({
     page: 1,
     limit: 1000,
-    olt_uuid: oltUuid.value,
-    search: search.value,
+    olt_uuid: oltUuid.value || "",
+    search: search.value || "",
   });
+
+  // 3) paksa table re-render total
+  tableKey.value++;
+
+  // 4) init DataTables di DOM baru
   await nextTick();
   initDataTable();
 }
 
-function initDataTable() {
-  const $ = window.jQuery;
-  if (!($ && $.fn && $.fn.DataTable)) {
-    console.warn(
-      "jQuery DataTables tidak ditemukan. Muat JS/CSS-nya di index.html"
-    );
-    return;
-  }
-  if (dt && $.fn.DataTable.isDataTable(tableRef.value)) dt.destroy();
-  dt = $(tableRef.value).DataTable({
-    paging: true,
-    searching: true,
-    autoWidth: false,
-    order: [],
-    pageLength: 10,
-    lengthMenu: [
-      [10, 25, 50, -1],
-      [10, 25, 50, "Semua"],
-    ],
-  });
-}
-function destroyDataTable() {
-  const $ = window.jQuery;
-  if (
-    dt &&
-    $ &&
-    $.fn &&
-    $.fn.DataTable &&
-    $.fn.DataTable.isDataTable(tableRef.value)
-  ) {
-    dt.destroy();
-    dt = null;
-  }
-}
-async function rebuildDataTable() {
-  destroyDataTable();
-  await nextTick();
-  initDataTable();
+// Label opsi OLT
+function oltLabel(o) {
+  const name = o.code || o.name || "(tanpa nama)";
+  const brand = o.brand ? ` (${o.brand})` : "";
+  const ip = o.ip_address ? ` — ${o.ip_address}` : "";
+  return `${name}${brand}${ip}`;
 }
 
 function goCreate() {
   router.push({ name: "olt-card-create", query: { olt_uuid: oltUuid.value } });
 }
 function goEdit(uuid) {
-  if (!uuid) return;
-  router.push({ name: "olt-card-edit", params: { uuid: String(uuid) } });
+  if (uuid)
+    router.push({ name: "olt-card-edit", params: { uuid: String(uuid) } });
 }
 function goDetail(uuid) {
-  if (!uuid) return;
-  router.push({ name: "olt-card-detail", params: { uuid: String(uuid) } });
+  if (uuid)
+    router.push({ name: "olt-card-detail", params: { uuid: String(uuid) } });
 }
 
-const selected = ref(new Set());
-function toggleRow(uuid, checked) {
+async function onDelete(uuid) {
   if (!uuid) return;
-  if (checked) selected.value.add(uuid);
-  else selected.value.delete(uuid);
+  if (!confirm("Yakin hapus card ini?")) return;
+  await store.remove(uuid);
+  await load();
 }
-function isChecked(uuid) {
-  return selected.value.has(uuid);
-}
-function clearSelection() {
-  selected.value.clear();
-}
+
+// Hapus banyak (opsional)
+const selected = ref(new Set());
+const toggleRow = (uuid, checked) => {
+  if (uuid) checked ? selected.value.add(uuid) : selected.value.delete(uuid);
+};
+const isChecked = (uuid) => selected.value.has(uuid);
+const clearSelection = () => selected.value.clear();
 async function deleteSelected() {
   if (!selected.value.size) return;
   if (!confirm(`Hapus ${selected.value.size} kartu?`)) return;
   await store.removeMany([...selected.value]);
   clearSelection();
-  await rebuildDataTable();
+  await load();
 }
 
+// SYNC
+const syncing = ref(false);
 async function doSync() {
   if (!oltUuid.value) {
-    alert("Masukkan OLT UUID dulu untuk Sync.");
+    alert("Pilih OLT dulu untuk Sync.");
     return;
   }
   if (!confirm("Jalankan sync card dari device?")) return;
-  await store.sync(oltUuid.value);
-  await load();
+  syncing.value = true;
+  try {
+    if (typeof store.syncByOlt === "function")
+      await store.syncByOlt(oltUuid.value);
+    else if (typeof store.sync === "function") await store.sync(oltUuid.value);
+    else if (typeof store.syncOltCard === "function")
+      await store.syncOltCard(oltUuid.value);
+    else throw new Error("Store belum punya method sync OLT Card.");
+    await load();
+  } catch (e) {
+    alert(
+      store.error || e?.response?.data?.message || e?.message || "Gagal sync"
+    );
+  } finally {
+    syncing.value = false;
+  }
 }
 
-onMounted(load);
-onBeforeUnmount(destroyDataTable);
-watch(items, async (nv, ov) => {
-  if (nv !== ov) await rebuildDataTable();
-});
-
-// refresh saat filter berubah
-watch([oltUuid, search], async () => {
-  await destroyDataTable();
+// mount
+onMounted(async () => {
+  await oltStore.fetchList({ page: 1, limit: 1000 }).catch(() => {});
   await load();
+});
+onBeforeUnmount(() => destroyDataTable());
+
+// Debounce filter
+let t;
+watch([oltUuid, search], ([o, s]) => {
+  clearTimeout(t);
+  t = setTimeout(() => {
+    router.replace({
+      query: { olt_uuid: o || undefined, search: s || undefined },
+    });
+    load();
+  }, 250);
 });
 </script>
 
 <template>
   <section class="card">
-    <header
-      class="card-header d-flex justify-content-between align-items-center"
-    >
-      <h2 class="card-title m-0">OLT Card</h2>
-      <div class="d-flex align-items-center gap-2">
-        <input
-          v-model.trim="oltUuid"
-          type="text"
-          class="form-control form-control-sm"
-          placeholder="OLT UUID (untuk filter & Sync)"
-          style="width: 260px"
-        />
-        <input
-          v-model.trim="search"
-          type="text"
-          class="form-control form-control-sm"
-          placeholder="Cari code/type/model"
-          style="width: 220px"
-        />
-        <button class="btn btn-sm btn-outline-secondary" @click="doSync">
-          Sync Card
-        </button>
-        <router-link
-          :to="{ name: 'olt-card-create', query: { olt_uuid: oltUuid } }"
-          class="btn btn-sm btn-primary"
+    <!-- HEADER: fleksibel & wrap -->
+    <header class="card-header">
+      <div class="d-flex flex-wrap align-items-center gap-2 w-100">
+        <h2 class="card-title m-0 flex-grow-1">OLT Card</h2>
+
+        <!-- toolbar responsif -->
+        <div
+          class="toolbar d-flex flex-wrap align-items-center gap-2 ms-auto w-100 w-md-auto"
         >
-          + Tambah Card
-        </router-link>
-        <button
-          class="btn btn-sm btn-outline-danger"
-          :disabled="!selected.size"
-          @click="deleteSelected"
-          title="Hapus terpilih"
-        >
-          Hapus Terpilih ({{ selected.size }})
-        </button>
+          <!-- Dropdown OLT -->
+          <select
+            v-model="oltUuid"
+            class="form-select form-select-sm flex-grow-1 flex-md-grow-0"
+            style="min-width: 260px"
+          >
+            <option value="">— Pilih OLT —</option>
+            <option v-for="o in olts" :key="o.uuid" :value="o.uuid">
+              {{ oltLabel(o) }}
+            </option>
+          </select>
+
+          <!-- Search milik aplikasi -->
+          <input
+            v-model.trim="search"
+            type="text"
+            class="form-control form-control-sm flex-grow-1 flex-md-grow-0"
+            style="min-width: 220px"
+            placeholder="Cari code/type/model"
+          />
+
+          <button
+            class="btn btn-sm btn-outline-secondary"
+            @click="doSync"
+            :disabled="syncing || !oltUuid"
+          >
+            <span
+              v-if="syncing"
+              class="spinner-border spinner-border-sm me-1"
+            ></span>
+            Sync Card
+          </button>
+
+          <router-link
+            :to="{ name: 'olt-card-create', query: { olt_uuid: oltUuid } }"
+            class="btn btn-sm btn-primary"
+          >
+            + Tambah Card
+          </router-link>
+
+          <button
+            class="btn btn-sm btn-outline-danger"
+            :disabled="!selected.size"
+            @click="deleteSelected"
+            title="Hapus terpilih"
+          >
+            Hapus Terpilih ({{ selected.size }})
+          </button>
+        </div>
       </div>
     </header>
 
@@ -189,22 +250,20 @@ watch([oltUuid, search], async () => {
 
       <div class="table-responsive">
         <table
-          ref="tableRef"
+          :key="tableKey"
           id="datatable-olt-card"
           class="table table-bordered table-striped mb-0"
         >
           <thead>
             <tr>
-              <th style="width: 28px">
-                <!-- kolom dummy untuk checkbox header (optional) -->
-              </th>
+              <th style="width: 28px"></th>
               <th>Code</th>
               <th>Slot</th>
               <th>Type</th>
               <th>Model</th>
               <th>Status</th>
               <th>Dibuat</th>
-              <th style="width: 140px">Aksi</th>
+              <th class="text-nowrap" style="width: 140px">Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -236,7 +295,6 @@ watch([oltUuid, search], async () => {
               </td>
               <td>{{ formatDate(row.created_at) }}</td>
               <td class="text-nowrap">
-                <!-- Detail -->
                 <router-link
                   :to="{
                     name: 'olt-card-detail',
@@ -247,8 +305,6 @@ watch([oltUuid, search], async () => {
                 >
                   <i class="icons icon-notebook"></i>
                 </router-link>
-
-                <!-- Edit -->
                 <router-link
                   :to="{
                     name: 'olt-card-edit',
@@ -259,12 +315,10 @@ watch([oltUuid, search], async () => {
                 >
                   <i class="icons icon-note"></i>
                 </router-link>
-
-                <!-- Hapus -->
                 <button
                   type="button"
                   class="mb-1 mt-1 me-1 btn btn-xs btn-default border border-danger"
-                  @click="store.remove(row.uuid)"
+                  @click="onDelete(row.uuid)"
                   title="Hapus"
                 >
                   <i class="icons icon-trash"></i>
@@ -277,3 +331,37 @@ watch([oltUuid, search], async () => {
     </div>
   </section>
 </template>
+
+<style scoped>
+/* Toolbar responsif: baris kedua saat layar kecil */
+.toolbar {
+  row-gap: 0.5rem;
+}
+
+/* Kecil: semua kontrol full width */
+@media (max-width: 767.98px) {
+  .toolbar > * {
+    width: 100% !important;
+  }
+}
+
+/* DataTables controls (length + filter) supaya stack rapi di mobile */
+:deep(.dataTables_wrapper .row) {
+  row-gap: 0.5rem;
+}
+@media (max-width: 767.98px) {
+  :deep(.dataTables_wrapper .dataTables_length),
+  :deep(.dataTables_wrapper .dataTables_filter) {
+    width: 100%;
+  }
+  :deep(.dataTables_wrapper .dataTables_filter input) {
+    width: 100%;
+  }
+}
+
+/* Hindari kolom lain memaksa nowrap selain kolom Aksi */
+.table td,
+.table th {
+  white-space: normal;
+}
+</style>

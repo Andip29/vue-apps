@@ -167,13 +167,39 @@ export const useOltCardStore = defineStore("oltCard", {
       }
     },
 
-    // SYNC CARD
-    async sync(olt_uuid) {
+    // SYNC kartu OLT berdasarkan OLT UUID (bukan card UUID)
+    async syncByOlt(olt_uuid) {
       this.saving = true;
       this.error = null;
       try {
-        const { data } = await http.post(`${BASE}/sync-card`, { olt_uuid });
-        return data?.data ?? data ?? null;
+        const id = String(olt_uuid || "").trim();
+        if (!id) throw new Error("OLT UUID kosong/invalid");
+
+        // urutkan beberapa kemungkinan endpoint + method
+        const attempts = [
+          { m: "post", url: `${BASE}/sync-olt/${id}`, body: {} }, // POST /sync-olt/:id
+          { m: "get", url: `${BASE}/sync-olt/${id}` }, // GET  /sync-olt/:id
+          { m: "post", url: `${BASE}/sync-olt`, body: { olt_uuid: id } }, // POST /sync-olt body
+          { m: "post", url: `${BASE}/sync-card`, body: { olt_uuid: id } }, // legacy fallback
+        ];
+
+        let lastErr = null;
+        for (const a of attempts) {
+          try {
+            const res =
+              a.m === "get"
+                ? await http.get(a.url)
+                : await http.post(a.url, a.body);
+            return res?.data?.data ?? res?.data ?? null;
+          } catch (e) {
+            lastErr = e;
+            const code = e?.response?.status;
+            // 404/405/400/500 -> coba pola berikutnya
+            if ([404, 405, 400, 500].includes(code)) continue;
+            throw e; // error lain langsung lempar
+          }
+        }
+        throw lastErr || new Error("Sync endpoint tidak tersedia");
       } catch (e) {
         this.error =
           e?.response?.data?.message ||
